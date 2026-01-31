@@ -1,0 +1,979 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Дело №47 — Детектив</title>
+  <style>
+    :root{
+      --bg0:#0f0a06;
+      --bg1:#17100b;
+      --bg2:#1d140d;
+
+      --cork1:#6a4b2e;
+      --cork2:#5a3f27;
+
+      --wood1:#2a1b12;
+      --wood2:#1d120c;
+
+      --paper:#e8d8c0;
+      --paper2:#d9c6ab;
+      --ink:#2a1a12;
+
+      --gold:#d4a25a;
+      --gold2:#c7863c;
+
+      --text:#f7f0e6;
+      --muted:rgba(247,240,230,.72);
+
+      --stroke:rgba(255,236,214,.12);
+      --shadow: 0 22px 60px rgba(0,0,0,.55);
+      --shadow2: 0 12px 34px rgba(0,0,0,.45);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+
+    /* ✅ FIX: НЕ центрируем весь документ, чтобы на телефоне верх не “терялся” */
+    body{
+      margin:0;
+      color:var(--text);
+      background:
+        radial-gradient(900px 650px at 15% 10%, rgba(212,162,90,.18), transparent 55%),
+        radial-gradient(700px 520px at 85% 25%, rgba(209,106,74,.12), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1) 55%, var(--bg2));
+      font-family: ui-serif, Georgia, "Times New Roman", Times, serif;
+
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+
+      padding: clamp(10px, 2.6vw, 18px);
+
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    body::before{
+      content:"";
+      position:fixed; inset:0;
+      pointer-events:none;
+      opacity:.12;
+      mix-blend-mode:overlay;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+    }
+
+    .app{
+      width:min(1100px, 100%);
+      margin: 0 auto;
+      border-radius:22px;
+      overflow:hidden;
+      box-shadow:var(--shadow);
+      border:1px solid rgba(255,236,214,.10);
+      background:
+        radial-gradient(1200px 900px at 50% 20%, rgba(255,255,255,.06), transparent 60%),
+        linear-gradient(180deg, rgba(0,0,0,.20), rgba(0,0,0,.35));
+    }
+
+    /* ===== Верх: доска с подозреваемыми ===== */
+    .hero{
+      padding:18px 18px 14px;
+      background:
+        radial-gradient(1200px 550px at 30% 0%, rgba(212,162,90,.18), transparent 60%),
+        linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.30));
+    }
+
+    .headerRow{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:14px;
+      margin-bottom:12px;
+    }
+
+    .title h1{
+      margin:0;
+      letter-spacing:.7px;
+      font-size:44px;
+      line-height:1;
+      font-weight:900;
+      text-shadow: 0 10px 40px rgba(0,0,0,.55);
+    }
+
+    .title .sub{
+      margin-top:6px;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      font-size:13px;
+      color:var(--muted);
+      max-width:70ch;
+      line-height:1.35;
+    }
+
+    .caseBadge{
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      font-size:12px;
+      color:rgba(247,240,230,.86);
+      border:1px solid rgba(255,236,214,.16);
+      border-radius:999px;
+      padding:8px 12px;
+      background:rgba(0,0,0,.18);
+      backdrop-filter: blur(8px);
+      white-space:nowrap;
+    }
+
+    .board{
+      border-radius:20px;
+      overflow:hidden;
+      border:1px solid rgba(255,236,214,.10);
+      box-shadow:var(--shadow2);
+      background:
+        repeating-linear-gradient(45deg, rgba(0,0,0,.06) 0 8px, rgba(255,255,255,.02) 8px 16px),
+        radial-gradient(1000px 450px at 50% 10%, rgba(255,255,255,.05), transparent 60%),
+        linear-gradient(180deg, var(--cork1), var(--cork2));
+      padding:16px;
+    }
+
+    /* ===== Лента подозреваемых: один ряд + горизонтальная прокрутка ===== */
+    .suspects{
+      display:flex;
+      gap:14px;
+      overflow-x:auto;
+      overflow-y:hidden;
+      padding:6px 6px 10px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,236,214,.28) rgba(0,0,0,.12);
+      cursor: grab;
+
+      /* ✅ FIX: нужен горизонтальный свайп */
+      touch-action: pan-x;
+      overscroll-behavior-x: contain;
+    }
+    .suspects.dragging{ cursor: grabbing; }
+
+    .suspects::-webkit-scrollbar{ height:10px; }
+    .suspects::-webkit-scrollbar-track{
+      background: rgba(0,0,0,.10);
+      border-radius:999px;
+    }
+    .suspects::-webkit-scrollbar-thumb{
+      background: rgba(255,236,214,.24);
+      border:1px solid rgba(0,0,0,.18);
+      border-radius:999px;
+    }
+    .suspects::-webkit-scrollbar-thumb:hover{
+      background: rgba(255,236,214,.34);
+    }
+
+    @media (max-width: 980px){
+      .title h1{ font-size:36px; }
+      .caseBadge{ display:none; }
+    }
+    @media (max-width: 420px){
+      .hero{ padding:14px 14px 12px; }
+      .board{ padding:12px; }
+      .title h1{ font-size:30px; }
+      .title .sub{ font-size:12.5px; }
+    }
+
+    .polaroid{
+      cursor:pointer;
+      border:none;
+      padding:0;
+      background:transparent;
+      text-align:left;
+      filter: drop-shadow(0 14px 22px rgba(0,0,0,.45));
+      transition: transform .12s ease, filter .12s ease;
+      transform: rotate(var(--rot, -1deg));
+      flex: 0 0 auto;
+      width: clamp(150px, 38vw, 200px);
+      scroll-snap-align: start;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .polaroid:hover{
+      transform: rotate(var(--rot, -1deg)) translateY(-2px);
+      filter: drop-shadow(0 18px 28px rgba(0,0,0,.55));
+    }
+    .polaroid:active{
+      transform: rotate(var(--rot, -1deg)) translateY(0px) scale(.995);
+    }
+    .polaroid.active{
+      filter: drop-shadow(0 18px 28px rgba(0,0,0,.58));
+    }
+
+    .polaroidCard{
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.86));
+      border-radius:14px;
+      padding:10px 10px 12px;
+      border:1px solid rgba(0,0,0,.08);
+      position:relative;
+      outline: 0 solid rgba(199,134,60,.0);
+    }
+    .polaroid.active .polaroidCard{
+      outline: 2px solid rgba(199,134,60,.45);
+      box-shadow: 0 0 0 6px rgba(199,134,60,.12);
+    }
+
+    .pin{
+      position:absolute;
+      top:8px;
+      left:50%;
+      transform: translateX(-50%);
+      width:10px;
+      height:10px;
+      border-radius:99px;
+      background: radial-gradient(circle at 30% 30%, #fff, #c13c2e);
+      box-shadow: 0 6px 10px rgba(0,0,0,.35);
+    }
+
+    .photo{
+      width:100%;
+      aspect-ratio: 4 / 3;
+      border-radius:10px;
+      border:1px solid rgba(0,0,0,.12);
+      overflow:hidden;
+      background: linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.22));
+    }
+    .photo img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+      filter: sepia(.35) contrast(1.05) saturate(.95);
+    }
+
+    .name{
+      margin-top:9px;
+      color:#2a1a12;
+      font-weight:900;
+      font-size:14px;
+    }
+
+    /* ===== Низ: стол, досье и папка ===== */
+    .desk{
+      display:grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap:14px;
+      padding:16px 18px 18px;
+      background:
+        radial-gradient(900px 500px at 15% 5%, rgba(255,255,255,.06), transparent 60%),
+        repeating-linear-gradient(90deg, rgba(0,0,0,.10) 0 28px, rgba(255,255,255,.02) 28px 56px),
+        linear-gradient(180deg, var(--wood1), var(--wood2));
+      border-top:1px solid rgba(255,236,214,.10);
+    }
+    @media (max-width: 980px){
+      .desk{ grid-template-columns: 1fr; padding:14px; }
+    }
+
+    .paper{
+      background:
+        radial-gradient(900px 500px at 50% 0%, rgba(255,255,255,.35), transparent 55%),
+        repeating-linear-gradient(0deg, rgba(0,0,0,.03) 0 2px, transparent 2px 24px),
+        linear-gradient(180deg, var(--paper), var(--paper2));
+      border-radius:18px;
+      border:1px solid rgba(0,0,0,.18);
+      box-shadow: 0 18px 45px rgba(0,0,0,.35);
+      color:var(--ink);
+      padding:14px 14px 12px;
+    }
+
+    .paperTitle{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .paperTitle h2{
+      margin:0;
+      font-size:18px;
+      font-weight:900;
+    }
+
+    .tag{
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      font-size:11px;
+      font-weight:900;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(0,0,0,.18);
+      background: rgba(255,255,255,.55);
+      color:#2a1a12;
+      white-space:nowrap;
+    }
+
+    .dossierTop{
+      display:grid;
+      grid-template-columns: 140px 1fr;
+      gap:12px;
+      align-items:start;
+    }
+    @media (max-width: 520px){
+      .dossierTop{ grid-template-columns: 1fr; }
+      .portrait{ max-width: 220px; margin: 0 auto; }
+    }
+
+    .portrait{
+      border-radius:14px;
+      border:1px solid rgba(0,0,0,.16);
+      overflow:hidden;
+      aspect-ratio: 1 / 1;
+      background: rgba(0,0,0,.08);
+    }
+    .portrait img{
+      width:100%; height:100%;
+      object-fit:cover;
+      filter: sepia(.35) contrast(1.05) saturate(.95);
+      display:block;
+    }
+
+    .chips{
+      margin-top:8px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      font-size:12px;
+      color: rgba(42,26,18,.85);
+    }
+    .chip{
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(0,0,0,.16);
+      background: rgba(255,255,255,.48);
+      font-weight:900;
+    }
+
+    .facts{
+      margin:10px 0 0;
+      padding-left:18px;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      font-size:13px;
+      line-height:1.45;
+      color: rgba(42,26,18,.92);
+    }
+
+    .folder{
+      border-radius:18px;
+      border:1px solid rgba(0,0,0,.18);
+      background:
+        radial-gradient(900px 500px at 50% 0%, rgba(255,255,255,.26), transparent 55%),
+        linear-gradient(180deg, rgba(232,216,192,.92), rgba(217,198,171,.92));
+      box-shadow: 0 18px 45px rgba(0,0,0,.35);
+      color:var(--ink);
+      overflow:hidden;
+    }
+    .folderHead{
+      padding:12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      border-bottom:1px solid rgba(0,0,0,.14);
+      background: rgba(255,255,255,.35);
+    }
+    .folderHead h2{
+      margin:0;
+      font-size:18px;
+      font-weight:900;
+    }
+    .folderBody{
+      padding:12px 14px 14px;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      position: relative;
+    }
+
+    .audioMeta{
+      margin-top:10px;
+      font-size:12px;
+      color: rgba(42,26,18,.75);
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      margin-top:10px;
+    }
+
+    .flag{
+      font-weight:900;
+      font-size:11px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(0,0,0,.18);
+      background: rgba(255,255,255,.55);
+      color:#24160f;
+      white-space:nowrap;
+    }
+    .flag.ok{
+      border-color: rgba(199,134,60,.45);
+      background: rgba(199,134,60,.16);
+    }
+
+    audio{ display:none; }
+    code{
+      background: rgba(0,0,0,.08);
+      border:1px solid rgba(0,0,0,.10);
+      padding:2px 6px;
+      border-radius:10px;
+    }
+
+    /* ===== Кнопка-папка ===== */
+    .folderBtn{
+      width:100%;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      cursor:pointer;
+      border-radius:16px;
+      border:1px solid rgba(0,0,0,.18);
+      background: rgba(255,255,255,.45);
+      box-shadow: 0 12px 26px rgba(0,0,0,.22);
+      padding:12px 12px;
+      transition: transform .12s ease, border-color .15s ease, background .15s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .folderBtn:hover{
+      transform: translateY(-2px);
+      border-color: rgba(199,134,60,.45);
+      background: rgba(255,255,255,.52);
+    }
+    .folderBtn:active{ transform: translateY(0px) scale(.995); }
+
+    .folderBtn svg{
+      width:58px;
+      height:44px;
+      flex:0 0 auto;
+      filter: drop-shadow(0 10px 16px rgba(0,0,0,.18));
+    }
+
+    .folderBack{ fill: rgba(26,17,11,.20); stroke: rgba(0,0,0,.10); }
+    .folderFront{ fill: rgba(199,134,60,.32); stroke: rgba(0,0,0,.12); }
+    .folderPaper{ fill: rgba(255,255,255,.55); stroke: rgba(0,0,0,.10); }
+    .folderLines{ stroke: rgba(42,26,18,.38); stroke-width:2; stroke-linecap:round; fill:none; }
+
+    .folderBtnText{ text-align:left; }
+    .folderBtnTitle{
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      font-weight: 900;
+      font-size: 13px;
+      color: rgba(42,26,18,.92);
+    }
+    .folderBtnSub{
+      margin-top:3px;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      font-size: 12px;
+      color: rgba(42,26,18,.70);
+    }
+
+    /* ===== Оверлей: большой лист ===== */
+    .docOverlay{
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: grid;
+      place-items: center;
+      padding: clamp(12px, 3vw, 18px);
+    }
+
+    .docBackdrop{
+      position:absolute;
+      inset:0;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(4px);
+    }
+
+    .docSheet{
+      position: relative;
+      width: min(900px, 96vw);
+      height: min(820px, 88vh);
+      overflow: auto;
+      border-radius: 18px;
+      border: 1px solid rgba(0,0,0,.18);
+      box-shadow: 0 22px 60px rgba(0,0,0,.55);
+      color: rgba(42,26,18,.92);
+      background:
+        radial-gradient(900px 500px at 50% 0%, rgba(255,255,255,.35), transparent 55%),
+        repeating-linear-gradient(0deg, rgba(0,0,0,.03) 0 2px, transparent 2px 24px),
+        linear-gradient(180deg, var(--paper), var(--paper2));
+    }
+
+    .docHead{
+      position: sticky;
+      top: 0;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(0,0,0,.14);
+      background: rgba(255,255,255,.45);
+      backdrop-filter: blur(6px);
+    }
+
+    .docTitle{
+      font-weight: 900;
+      font-size: 16px;
+    }
+    .docMetaLine{
+      margin-top:4px;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      font-size: 12px;
+      color: rgba(42,26,18,.70);
+    }
+
+    .docHeadBtns{
+      display:flex;
+      gap:8px;
+      flex: 0 0 auto;
+    }
+
+    .docBtn{
+      cursor:pointer;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,.18);
+      background: rgba(255,255,255,.55);
+      color: #24160f;
+      font-weight: 900;
+      font-size: 12px;
+      padding: 8px 10px;
+      transition: .12s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .docBtn:hover{ transform: translateY(-1px); }
+
+    .docBody{
+      padding: 14px;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      font-size: 13px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .docFoot{
+      padding: 10px 14px 14px;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      font-size: 12px;
+      color: rgba(42,26,18,.70);
+      border-top: 1px dashed rgba(0,0,0,.18);
+    }
+
+    .docOverlay[hidden]{ display:none !important; }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <section class="hero">
+      <div class="headerRow">
+        <div class="title">
+          <h1>ДЕЛО №47</h1>
+          
+        </div>
+        <div class="caseBadge">РАССЛЕДОВАНИЕ • Игра-детектив</div>
+      </div>
+
+      <div class="board">
+        <div class="suspects" id="suspects"></div>
+      </div>
+    </section>
+
+    <section class="desk">
+      <article class="paper" id="dossier"></article>
+
+      <aside class="folder">
+        <div class="folderHead">
+          <h2>Показания</h2>
+          <span class="tag" id="whoTag">—</span>
+        </div>
+
+        <div class="folderBody">
+          <!-- Папка с документами -->
+          <button id="openDocBtn" class="folderBtn" type="button" aria-label="Открыть документ с показаниями">
+            <svg viewBox="0 0 64 48" aria-hidden="true">
+              <path class="folderBack" d="M4 14c0-2.2 1.8-4 4-4h16l5 6h27c2.2 0 4 1.8 4 4v18c0 2.2-1.8 4-4 4H8c-2.2 0-4-1.8-4-4V14z"/>
+              <path class="folderFront" d="M4 18c0-2.2 1.8-4 4-4h48c2.2 0 4 1.8 4 4v20c0 2.2-1.8 4-4 4H8c-2.2 0-4-1.8-4-4V18z"/>
+              <path class="folderPaper" d="M18 22h28c1.1 0 2 .9 2 2v14c0 1.1-.9 2-2 2H18c-1.1 0-2-.9-2-2V24c0-1.1.9-2 2-2z"/>
+              <path class="folderLines" d="M20 27h24M20 31h24M20 35h18"/>
+            </svg>
+
+            <div class="folderBtnText">
+              <div class="folderBtnTitle">Папка с документами</div>
+              <div class="folderBtnSub">Нажми, чтобы открыть большой лист</div>
+            </div>
+          </button>
+
+          <div class="audioMeta" id="audioMeta"></div>
+
+          <div class="row">
+            <span class="flag" id="heardFlag">не прочитано</span>
+          </div>
+
+          <div style="margin-top:10px; font-size:12px; color: rgba(42,26,18,.75)">
+            Аудио файл: <code id="audioPath">—</code>
+          </div>
+
+          <!-- реальный audio -->
+          <audio id="recorderAudio" preload="auto"></audio>
+
+          <!-- Оверлей: большой лист -->
+          <div class="docOverlay" id="docOverlay" hidden>
+            <div class="docBackdrop" id="docBackdrop" aria-hidden="true"></div>
+
+            <div class="docSheet" role="dialog" aria-modal="true" aria-label="Показания">
+              <div class="docHead">
+                <div>
+                  <div class="docTitle" id="docTitle">Показания</div>
+                  <div class="docMetaLine" id="docMetaLine">—</div>
+                </div>
+
+                <div class="docHeadBtns">
+                  <button class="docBtn" id="docPlay" type="button" aria-label="Воспроизвести/пауза">▶︎ / ❚❚</button>
+                  <button class="docBtn" id="docClose" type="button" aria-label="Закрыть">✕</button>
+                </div>
+              </div>
+
+              <div class="docBody" id="docBody"></div>
+
+              <div class="docFoot">
+                ESC или клик вне листа — закрыть
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </div>
+
+  <script>
+    const SUSPECTS = [
+      { id:"mia",    name:"Мия Синкевич",   role:"Свидетель", age:24, status:"Наблюдение", img:"img/mia.jpg",
+        facts:["Видела человека у подъезда в 23:40.","Нервничает, путается во времени.","Повторяет: «Я ничего не трогала»."] ,
+        audio:{ title:"Запись допроса по делу №47", date:"31 января", duration:"01:32", src:"audio/mia_01.mp3",
+          transcript:"(Текст) Я шла домой… у подъезда стоял мужчина… лица не видела…"}},
+
+      { id:"saveliy",name:"Савелий Кронин", role:"Подозреваемый", age:29, status:"Подозреваемый", img:"img/saveliy.jpg",
+        facts:["Работал рядом с местом событий.","Следы табака на одежде.","Путается в событиях после 23:00."] ,
+        audio:{ title:"Запись допроса по делу №47", date:"31 января", duration:"03:18", src:"audio/saveliy_01.mp3",
+          transcript:"(Текст) Я был на работе… потом вышел покурить…"}},
+
+      { id:"ksenia", name:"Ксения Клепач",  role:"Свидетель", age:31, status:"Нейтрально", img:"img/ksenia.jpg",
+        facts:["Слышала шаги и хлопок двери.","Уверена: 23:40.","Дверь не скрипела (смазана)."] ,
+        audio:{ title:"Запись допроса по делу №47", date:"31 января", duration:"02:11", src:"audio/ksenia_01.mp3",
+          transcript:"(Текст) Сначала шаги… потом тишина… потом хлопок…"}},
+
+      { id:"sofia",  name:"София Ермолова", role:"Подозреваемая", age:27, status:"Подозреваемая", img:"img/sofia.jpg",
+        facts:["Связь с клубом косвенно подтверждается.","Знает про улику заранее.","Слишком спокойна на ключевые вопросы."] ,
+        audio:{ title:"Запись допроса по делу №47", date:"31 января", duration:"01:32", src:"audio/sofia_01.mp3",
+          transcript:"(Текст) Я не понимаю, почему вы спрашиваете про клуб…"}},
+
+      { id:"artem",  name:"Артем Левченко", role:"Свидетель", age:33, status:"Нейтрально", img:"img/artem.jpg",
+        facts:["Видел силуэт у подъезда.","Хорошо описывает одежду.","Не помнит обувь — странно."] ,
+        audio:{ title:"Запись допроса по делу №47", date:"31 января", duration:"02:45", src:"audio/artem_01.mp3",
+          transcript:"(Текст) Пальто тёмное… перчатки… обувь… не помню…"}},
+
+      { id:"alexey", name:"Алексей Далиев", role:"Подозреваемый", age:35, status:"Подозреваемый", img:"img/alexey.jpg",
+        facts:["Конфликт по работе.","Возможен мотив из-за денег/доступа.","Проверить звонки после 22:30."] ,
+        audio:{ title:"Запись допроса по делу №47", date:"31 января", duration:"04:12", src:"audio/alexey_01.mp3",
+          transcript:"(Текст) Мы спорили, но я не угрожал…"}},
+
+      { id:"arseniy",name:"Арсений Мадов",  role:"Свидетель", age:41, status:"Полезный свидетель", img:"img/arseniy.jpg",
+        facts:["Охранник/вахтёр.","Помнит номера машин.","Сопоставить с помехами камеры."] ,
+        audio:{ title:"Запись допроса по делу №47", date:"31 января", duration:"01:58", src:"audio/arseniy_01.mp3",
+          transcript:"(Текст) Я записываю номера. В 23:38 была машина…"}},
+
+      { id:"fedor",  name:"Федор Нивелко",  role:"Свидетель", age:38, status:"Наблюдение", img:"img/fedor.jpg",
+        facts:["Сосед по площадке.","Слышал разговор через дверь.","Фраза «не приходи» всплывает снова."] ,
+        audio:{ title:"Запись допроса по делу №47", date:"31 января", duration:"03:01", src:"audio/fedor_01.mp3",
+          transcript:"(Текст) Я не вмешивался… просто слышал…"}}
+    ];
+
+    const LS_KEY = "case47_heard";
+    const heard = loadHeard();
+
+    function loadHeard(){
+      try{ return JSON.parse(localStorage.getItem(LS_KEY) || "{}") || {}; }
+      catch{ return {}; }
+    }
+    function saveHeard(){
+      localStorage.setItem(LS_KEY, JSON.stringify(heard));
+    }
+
+    function placeholderDataUri(name){
+      const initials = name.split(" ").map(x=>x[0]).slice(0,2).join("").toUpperCase();
+      const svg =
+`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="450">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3a2518"/>
+      <stop offset="1" stop-color="#1a110b"/>
+    </linearGradient>
+    <filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/></filter>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#g)"/>
+  <rect width="100%" height="100%" opacity=".20" filter="url(#n)"/>
+  <circle cx="300" cy="175" r="85" fill="rgba(255,255,255,.08)"/>
+  <rect x="170" y="270" width="260" height="140" rx="70" fill="rgba(255,255,255,.06)"/>
+  <text x="50%" y="52%" text-anchor="middle" font-family="Georgia,serif" font-size="70" fill="rgba(212,162,90,.85)" font-weight="900">${initials}</text>
+</svg>`;
+      return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    }
+
+    const suspectsEl   = document.getElementById("suspects");
+    const dossierEl    = document.getElementById("dossier");
+    const whoTagEl     = document.getElementById("whoTag");
+    const audioMetaEl  = document.getElementById("audioMeta");
+    const audioPathEl  = document.getElementById("audioPath");
+    const heardFlagEl  = document.getElementById("heardFlag");
+
+    const recorderAudio= document.getElementById("recorderAudio");
+
+    const openDocBtn   = document.getElementById("openDocBtn");
+    const docOverlay   = document.getElementById("docOverlay");
+    const docBackdrop  = document.getElementById("docBackdrop");
+    const docClose     = document.getElementById("docClose");
+    const docPlay      = document.getElementById("docPlay");
+    const docTitleEl   = document.getElementById("docTitle");
+    const docMetaLineEl= document.getElementById("docMetaLine");
+    const docBodyEl    = document.getElementById("docBody");
+
+    let activeId = "sofia";
+
+    function renderSuspects(){
+      suspectsEl.innerHTML = "";
+      SUSPECTS.forEach((s, i) => {
+        const b = document.createElement("button");
+        b.className = "polaroid" + (s.id === activeId ? " active" : "");
+        b.style.setProperty("--rot", (i%2===0 ? -2.2 : 1.8) + "deg");
+        b.type = "button";
+        b.innerHTML = `
+          <div class="polaroidCard">
+            <div class="pin"></div>
+            <div class="photo">
+              <img alt="${esc(s.name)}" src="${escAttr(s.img)}"
+                   onerror="this.onerror=null;this.src='${escAttr(placeholderDataUri(s.name))}'">
+            </div>
+            <div class="name">${esc(s.name)}</div>
+          </div>
+        `;
+        b.addEventListener("click", () => selectSuspect(s.id));
+        suspectsEl.appendChild(b);
+      });
+    }
+
+    function renderDossier(s){
+      const facts = (s.facts||[]).map(x=>`<li>${esc(x)}</li>`).join("");
+      dossierEl.innerHTML = `
+        <div class="paperTitle">
+          <h2>Досье: ${esc(s.name)}</h2>
+          <span class="tag">Подозреваемый №${String(SUSPECTS.indexOf(s)+1).padStart(2,"0")}</span>
+        </div>
+
+        <div class="dossierTop">
+          <div class="portrait">
+            <img alt="${esc(s.name)}" src="${escAttr(s.img)}"
+                 onerror="this.onerror=null;this.src='${escAttr(placeholderDataUri(s.name))}'">
+          </div>
+          <div>
+            <div class="chips">
+              <span class="chip">Роль: ${esc(s.role)}</span>
+              <span class="chip">Возраст: ${esc(String(s.age))}</span>
+              <span class="chip">Статус: ${esc(s.status)}</span>
+            </div>
+
+            <ul class="facts">${facts}</ul>
+          </div>
+        </div>
+
+        <div style="margin-top:10px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; font-size:12.5px; color: rgba(42,26,18,.78)">
+          
+        </div>
+      `;
+    }
+
+    function stopAudio(){
+      try{
+        recorderAudio.pause();
+        recorderAudio.currentTime = 0;
+      }catch{}
+    }
+
+    function renderTestimony(s){
+      whoTagEl.textContent = s.name;
+
+      const a = s.audio;
+      audioMetaEl.innerHTML = `
+        <span>📅 ${esc(a.date)}</span>
+        <span>⏱ ${esc(a.duration)}</span>
+        <span>📎 ${esc(a.title)}</span>
+      `;
+
+      audioPathEl.textContent = a.src;
+
+      const ok = !!heard[s.id];
+      heardFlagEl.textContent = ok ? "прочитано" : "не прочитано";
+      heardFlagEl.className = "flag" + (ok ? " ok" : "");
+
+      stopAudio();
+      recorderAudio.src = a.src;
+      recorderAudio.load();
+    }
+
+    function closeDoc(silentStop = true){
+      if (docOverlay.hidden) return;
+      docOverlay.hidden = true;
+      document.body.style.overflow = "";
+      if (silentStop) stopAudio();
+    }
+
+    function selectSuspect(id){
+      closeDoc(true);
+      activeId = id;
+      const s = SUSPECTS.find(x=>x.id===activeId);
+      if (!s) return;
+
+      renderSuspects();
+      renderDossier(s);
+      renderTestimony(s);
+    }
+
+    function markReadCurrent(){
+      const s = SUSPECTS.find(x=>x.id===activeId);
+      if (!s) return;
+      heard[s.id] = true;
+      saveHeard();
+      heardFlagEl.textContent = "прочитано";
+      heardFlagEl.className = "flag ok";
+    }
+
+    function openDoc(){
+      const s = SUSPECTS.find(x=>x.id===activeId);
+      if (!s) return;
+
+      const a = s.audio;
+      docTitleEl.textContent = `Показания: ${s.name}`;
+      docMetaLineEl.textContent = `${a.date} • ${a.duration} • ${a.title}`;
+      docBodyEl.textContent = a.transcript || "(Текст показаний не добавлен)";
+
+      docOverlay.hidden = false;
+      document.body.style.overflow = "hidden";
+      markReadCurrent();
+    }
+
+    async function toggleAudio(){
+      try{
+        if (recorderAudio.paused) await recorderAudio.play();
+        else recorderAudio.pause();
+      } catch(e){
+        console.warn("Не удалось воспроизвести:", e);
+      }
+    }
+
+    openDocBtn.addEventListener("click", openDoc);
+    docClose.addEventListener("click", () => closeDoc(true));
+    docBackdrop.addEventListener("click", () => closeDoc(true));
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !docOverlay.hidden) closeDoc(true);
+    });
+    docPlay.addEventListener("click", toggleAudio);
+
+    recorderAudio.addEventListener("ended", () => {
+      markReadCurrent();
+    });
+
+    // ===== UX: колесо мыши = горизонтальная прокрутка, drag-to-scroll ТОЛЬКО ПОСЛЕ ДВИЖЕНИЯ (мышь) =====
+    (function enhanceSuspectsScroll(){
+      const rail = suspectsEl;
+      if (!rail) return;
+
+      rail.addEventListener("wheel", (e) => {
+        const mostlyVertical = Math.abs(e.deltaY) > Math.abs(e.deltaX);
+        if (mostlyVertical) {
+          rail.scrollLeft += e.deltaY;
+          e.preventDefault();
+        }
+      }, { passive:false });
+
+      let isDown = false;
+      let startX = 0;
+      let startLeft = 0;
+      let moved = false;
+      let movedRecently = false;
+      let pid = null;
+      const THRESH = 6;
+
+      rail.addEventListener("pointerdown", (e) => {
+        if (e.pointerType !== "mouse") return;
+        isDown = true;
+        moved = false;
+        pid = e.pointerId;
+        startX = e.clientX;
+        startLeft = rail.scrollLeft;
+      });
+
+      rail.addEventListener("pointermove", (e) => {
+        if (!isDown) return;
+        const dx = e.clientX - startX;
+
+        if (!moved && Math.abs(dx) > THRESH) {
+          moved = true;
+          rail.classList.add("dragging");
+          try { rail.setPointerCapture(pid); } catch {}
+        }
+
+        if (moved) {
+          rail.scrollLeft = startLeft - dx;
+          e.preventDefault();
+        }
+      }, { passive:false });
+
+      function endDrag(){
+        if (!isDown) return;
+        isDown = false;
+
+        if (moved) {
+          movedRecently = true;
+          setTimeout(() => movedRecently = false, 0);
+        }
+
+        rail.classList.remove("dragging");
+        try {
+          if (pid != null && rail.hasPointerCapture(pid)) rail.releasePointerCapture(pid);
+        } catch {}
+        pid = null;
+        moved = false;
+      }
+
+      rail.addEventListener("pointerup", endDrag);
+      rail.addEventListener("pointercancel", endDrag);
+      rail.addEventListener("pointerleave", endDrag);
+
+      rail.addEventListener("click", (e) => {
+        if (movedRecently) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }, true);
+    })();
+
+    function esc(s){
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+    function escAttr(s){ return String(s || "").replaceAll('"',"&quot;"); }
+
+    selectSuspect(activeId);
+  </script>
+</body>
+</html>
